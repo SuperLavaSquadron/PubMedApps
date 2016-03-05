@@ -150,7 +150,7 @@ module PubMedApps
 
         describe "#references" do
           it "returns an array of Citations that this Citation cites" do
-            expect(@citation.references). to eq SpecConst::REFERENCES.first
+            expect(@citation.references). to match_array SpecConst::REFERENCES.first
           end
         end
       end
