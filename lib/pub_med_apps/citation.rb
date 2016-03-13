@@ -43,7 +43,7 @@ module PubMedApps
       end
       @related_citations
     end
-    
+
     attr_accessor :pmid, :score, :abstract, :title, :pub_date, :references,
     :normalized_score
 
@@ -57,7 +57,7 @@ module PubMedApps
       end
 
       pmid.strip!
-      
+
       if pmid.match /^[0-9]+$/
         @pmid = pmid
       else
@@ -85,19 +85,25 @@ module PubMedApps
     # First, verifies that the @related_citations is instantiated
     # Second, checks that all @related_citations are Citations
     # Then converts query node and @related_citations to json
-    # 
+    #
     #
     # @return [JsonString] json formatted related citations
     def to_json
       related_citations
       normalize
       citations=@related_citations
-      nodes = [{:PMID=>@pmid}.to_json]
+
+      # get info if needed
+      get_info unless @abstract
+
+      nodes = [{:PMID => @pmid,
+                :abstract => @abstract,
+                :title => @title}.to_json]
       links = []
 
       unless citations.empty?
         citations.each_with_index do |rec,i|
-          nodes << {:PMID=>rec.pmid}.to_json
+          nodes << {:PMID=>rec.pmid, }.to_json
           links << {:source=>0,
             :target=>i+1,
             :value=>rec.normalized_score}.to_json
@@ -125,7 +131,7 @@ module PubMedApps
         @citations = nil
       end
     end
-    
+
     private
 
     # citations is an array of Citaiton objects
@@ -180,16 +186,16 @@ module PubMedApps
       # @pmid will be nil if get_info was called and the PMID didn't
       # have a matching UID in NCBI
       return [] if @pmid.nil?
-      
+
       doc = EUtils.elink @pmid
       pm_pm = doc.css('LinkSetDb').first
 
       # should be nil if there are no related citations OR get_info
       # was NOT called and the PMID didn't have a matching UID in NCBI
       return [] if pm_pm.nil?
-      
+
       name = pm_pm.at('LinkName').text
-      
+
       unless  name == 'pubmed_pubmed'
         abort("ERROR: We got #{name}. Should've been pubmed_pubmed. " +
               "Possibly bad xml file.")
