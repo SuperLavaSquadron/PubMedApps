@@ -62,7 +62,7 @@ module PubMedApps
         expect { Citation.new bad_pmid }.to raise_error(ArgumentError,
                                                         err_msg)
       end
-      
+
       it "raises an ArgumentError if not passed a string" do
         bad_pmid = 17284678
         err_msg = "PubMedApps::Citation.new requires a String"
@@ -109,15 +109,15 @@ module PubMedApps
 
         it "sets @references to nil" do
           expect(@citation.references).to be nil
-        end        
+        end
       end
-      
+
       context "after calling #get_info, let's spec the instance methods" do
         before :all do
           @citation = Citation.new SpecConst::PMIDS.first
           @citation.get_info
         end
-        
+
         describe "#pmid" do
           it "returns the original pmid" do
             expect(@citation.pmid).to eq SpecConst::PMIDS.first
@@ -128,19 +128,19 @@ module PubMedApps
           it "returns the original abstract" do
             expect(@citation.abstract).to eq SpecConst::ABSTRACTS.first
           end
-        end      
+        end
 
         describe "#pub_date" do
           it "returns the original pub_date" do
             expect(@citation.pub_date).to eq SpecConst::PUB_DATES.first
           end
-        end      
+        end
 
         describe "#score" do
           it "returns the original score" do
             expect(@citation.score).to eq 0
           end
-        end      
+        end
 
         describe "#title" do
           it "returns the original title" do
@@ -155,7 +155,7 @@ module PubMedApps
         end
       end
     end
-    
+
     describe "#related_citations" do
       context "when @pmid is nil (No PMID found)" do
         before :each do
@@ -176,7 +176,7 @@ module PubMedApps
           end
         end
       end
-          
+
 
       context "when @pmid is not nil (ie the PMID is okay)" do
         context "when the citation *does* have related citations" do
@@ -190,7 +190,7 @@ module PubMedApps
             allow(EUtils).to receive_messages :elink => xml_with_links
             @related_citations = citation.related_citations
           end
-          
+
           it "returns an array with related citations" do
             pmids = @related_citations.map { |id| id.pmid }
             expect(pmids).to eq SpecConst::PMIDS
@@ -204,22 +204,22 @@ module PubMedApps
           end
 
           it "adds the score to the related Citation objects" do
-            scores = @related_citations.map { |id| id.score } 
+            scores = @related_citations.map { |id| id.score }
             expect(scores).to eq SpecConst::SCORES
           end
 
           it "adds the title to the related Citation objects" do
-            titles = @related_citations.map { |id| id.title } 
+            titles = @related_citations.map { |id| id.title }
             expect(titles).to eq SpecConst::TITLES
           end
 
           it "adds the abstract to the related Citation objects" do
-            abstracts = @related_citations.map { |id| id.abstract } 
+            abstracts = @related_citations.map { |id| id.abstract }
             expect(abstracts).to eq SpecConst::ABSTRACTS
           end
 
           it "adds the pub_date to the related Citation objects" do
-            pub_dates = @related_citations.map { |id| id.pub_date } 
+            pub_dates = @related_citations.map { |id| id.pub_date }
             expect(pub_dates).to eq SpecConst::PUB_DATES
           end
 
@@ -237,22 +237,38 @@ module PubMedApps
       end
     end
 
+    shared_examples "for the query node" do
+      it "has a PMID" do
+        expect(json).
+          to include %Q{"PMID":"#{SpecConst::PMIDS.first}"}
+      end
+
+      it "has an abstract" do
+        expect(json).
+          to include %Q{"abstract":"#{SpecConst::ABSTRACT_1}"}
+      end
+
+      it "has a title" do
+        expect(json).
+          to include %Q{"title":"#{SpecConst::TITLE_1}"}
+      end
+    end
+
     describe "#to_json" do
       context "when the query *doesn't* have related citations" do
         before(:each) do
           allow(EUtils).to receive_messages :elink => xml_no_links
           @queryjson=citation.to_json
         end
-        
+
+        include_examples "for the query node" do
+          let(:json) { @queryjson }
+        end
+
         it "returns a properly formatted json string" do
           expect{JSON.parse @queryjson}.to_not raise_error
         end
 
-        it "returns only the query node" do
-          expect(@queryjson).
-            to include "\"nodes\":[{\"PMID\":\"#{SpecConst::PMIDS.first}\"}]"
-        end
-        
         it "does not return any links" do
           parsed = JSON.parse @queryjson
           expect(parsed["links"]).to be_empty
@@ -266,10 +282,15 @@ module PubMedApps
           xml_with_links =
             Nokogiri::XML open File.join(dir, '..', 'test_files',
                                          fname)
-        
+
           allow(EUtils).to receive_messages :elink => xml_with_links
           @queryjson=citation.to_json
         end
+
+        include_examples "for the query node" do
+          let(:json) { @queryjson }
+        end
+
         it "returns a properly formatted json string" do
           expect{JSON.parse @queryjson}.to_not raise_error
         end
@@ -279,11 +300,6 @@ module PubMedApps
           expect(parsed["nodes"]).to_not be_empty
         end
 
-        it "returns a json containing the query node" do
-          expect(@queryjson).
-            to include "\"nodes\":[{\"PMID\":\"#{SpecConst::PMIDS.first}\"}"
-        end
-        
         it "returns a json containing an array of links" do
           parsed = JSON.parse @queryjson
           expect(parsed["links"]).to_not be_empty
